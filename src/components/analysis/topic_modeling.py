@@ -231,7 +231,6 @@ class TopicModelingComponent(BaseComponent):
                         st.write(f"• {doc.get('Document', 'Unknown')[:60]}...")
             
             # Topic similarity to core texts
-            # Topic similarity to core texts
             if st.button("Analyze Topic-Target Similarity"):
                 with st.spinner("Calculating how target documents relate to core topics..."):
                     target_similarities = coordinator.calculate_topic_target_similarities(results)
@@ -288,7 +287,12 @@ class TopicModelingComponent(BaseComponent):
                 # Document analysis with paragraph numbers
                 st.markdown("#### Document Topic Composition")
                 
-                for doc in target_similarities['target_analysis'][:15]:  # Show first 15 documents
+                filtered_docs = [
+                    doc for doc in target_similarities['target_analysis'] 
+                    if doc['primary_topic']['id'] == selected_topic
+                    ]
+
+                for doc in filtered_docs[:30]:  # Show first 30 documents
                     # Create more informative title with paragraph info
                     doc_title = f"{doc['target_document']['title']} (Paragraph {doc['target_document']['paragraph_number']})"
                     primary_topic = doc['primary_topic']['label']
@@ -314,7 +318,8 @@ class TopicModelingComponent(BaseComponent):
                             st.write(f"**Core file:** {core_doc['filename']}")
                         
                         # Text preview
-                        st.write(f"**Text preview:** {doc['text_preview']}")
+                        st.write(f"**Target text:** {doc['text_preview']}")
+                        st.write(f"**Core text:** {core_doc['text_preview']}")
 
         # Help section
         with st.expander("Topic Modeling Help"):

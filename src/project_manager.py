@@ -97,6 +97,15 @@ class ProjectManager:
                     if any(similarity_state.values()):
                         saved_components.append("Similarity models")
             
+            #save baseline
+
+            if hasattr(coordinator, 'baseline_results') and coordinator.baseline_results:
+                save_data['baseline_results'] = self._serialize_baseline_results(coordinator.baseline_results)
+                saved_components.append("Statistical baselines")
+
+            if hasattr(coordinator, 'baseline_analysis_ready'):
+                save_data['baseline_analysis_ready'] = coordinator.baseline_analysis_ready
+
             # Save topic modeling results
             topic_keys = [
                 'topic_results', 'topic_target_similarities', 'topic_config',
@@ -198,6 +207,18 @@ class ProjectManager:
         except Exception as e:
             logger.error(f"Error serializing similarity engine: {str(e)}")
             return {}
+    
+    def _serialize_baseline_results(self, baseline_results: Dict) -> Dict:
+        """Serialize baseline results for saving"""
+        serialized = {}
+        for key, results in baseline_results.items():
+            serialized_result = results.copy()
+            # Convert numpy arrays to lists
+            for field, value in serialized_result.items():
+                if isinstance(value, np.ndarray):
+                    serialized_result[field] = value.tolist()
+            serialized[key] = serialized_result
+        return serialized
     
     def _serialize_topic_results(self, topic_results: Dict) -> Dict:
         """Serialize topic modeling results, handling BERTopic model specially"""

@@ -98,6 +98,62 @@ class PreprocessingComponent(BaseComponent):
                     st.session_state.target_embeddings_ready = True
                 else:
                     st.error(message)
+
+        #baseline generator            
+        if coordinator.target_embeddings is not None and coordinator.core_embeddings is not None:
+            st.markdown("### Statistical Baseline Analysis")
+            
+            if not coordinator.baseline_analysis_ready:
+                st.info("Generate statistical baselines to assess significance of similarity scores in subsequent analyses.")
+                
+                col1, col2 = st.columns([2, 1])
+                with col1:
+                    if st.button("Generate Statistical Baselines", type="primary"):
+                        with st.spinner("Generating baseline distributions..."):
+                            success, message = coordinator.generate_baseline_analysis(
+                                progress_callback=lambda msg: st.write(f"Status: {msg}")
+                            )
+                        
+                        if success:
+                            st.success(message)
+                            st.session_state['baseline_analysis_ready'] = True
+                            st.rerun()
+                        else:
+                            st.error(message)
+                
+                with col2:
+                    st.markdown("""
+                    **About Baselines:**
+                    - Compares your results to random chance
+                    - Provides p-values and effect sizes
+                    - Takes 2-3 minutes to complete
+                    - Only needs to run once per project
+                    """)
+            
+            else:
+                st.success("✅ Statistical baselines ready")
+                
+                # Display baseline summary
+                if 'document_shuffle' in coordinator.baseline_results:
+                    baseline = coordinator.baseline_results['document_shuffle']
+                    
+                    with st.expander("Baseline Analysis Summary"):
+                        col1, col2, col3 = st.columns(3)
+                        
+                        with col1:
+                            st.metric("Baseline Mean Similarity", f"{baseline['baseline_mean']:.4f}")
+                        with col2:
+                            st.metric("Baseline Std Dev", f"{baseline['baseline_std']:.4f}")
+                        with col3:
+                            st.metric("Permutations", baseline['n_permutations'])
+                        
+                        st.write(f"**Observed Mean Similarity:** {baseline['original_mean_similarity']:.4f}")
+                        
+                        # Quick significance assessment
+                        sig_result = coordinator.assess_similarity_significance(
+                            baseline['original_mean_similarity']
+                        )
+                        st.write(f"**Statistical Assessment:** {sig_result.get('interpretation', 'Unable to assess')}")
         
         # Analysis summary
         if hasattr(coordinator, 'core_embeddings') and coordinator.core_embeddings is not None:
@@ -224,6 +280,17 @@ class PreprocessingComponent(BaseComponent):
                 
                 if success:
                     st.success(message)
+                    if coordinator.baseline_analysis_ready:
+                        # Assess significance of the top similarity score
+                        top_similarity = result['influential_texts'][0]['average_similarity']
+                        significance = coordinator.assess_similarity_significance(top_similarity)
+                        
+                        if significance.get('p_value'):
+                            st.info(f"**Statistical Significance:** {significance['interpretation']}")
+                            with st.expander("Statistical Details"):
+                                st.write(f"P-value: {significance['p_value']:.4f}")
+                                st.write(f"Effect size: {significance['effect_size']:.2f}")
+                                st.write(f"Interpretation: The top similarity score of {top_similarity:.3f} occurs in {significance['p_value']*100:.1f}% of random document pairings")
                     
                     # Display results
                     for text_info in result['influential_texts']:

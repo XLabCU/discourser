@@ -635,7 +635,19 @@ class VectorAnalysisComponent(BaseComponent):
                             st.write("→ Distributions are significantly different")
                         else:
                             st.write("→ No significant difference detected")
-
+        if 'analysis_coordinator' in st.session_state:
+                coordinator = st.session_state.analysis_coordinator
+                if coordinator.baseline_analysis_ready:
+                    # Assess significance of mean difference
+                    mean_diff = results['overlap_metrics']['mean_difference']
+                    significance = coordinator.assess_similarity_significance(abs(mean_diff))
+                    
+                    if significance.get('p_value'):
+                        st.info(f"**Statistical Significance:** {significance['interpretation']}")
+                        with st.expander("Statistical Details"):
+                            st.write(f"P-value: {significance['p_value']:.4f}")
+                            st.write(f"Effect size: {significance['effect_size']:.2f}")
+                            
     def _display_single_corpus_results(self, results):
         """Display regular single corpus analysis results (your existing method)"""
         proj_results = results['projection_results']
